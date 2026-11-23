@@ -1,10 +1,13 @@
 using System;
+using helluvia01.Content.Particles;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Terraria;
 using Terraria.DataStructures;
+using Terraria.Graphics.CameraModifiers;
 using Terraria.ID;
 using Terraria.ModLoader;
+using Terraria.Utilities;
 
 namespace helluvia01.Content.Items
 {
@@ -13,6 +16,7 @@ namespace helluvia01.Content.Items
 	// https://github.com/tModLoader/tModLoader/tree/stable/ExampleMod
 	public class smg : ModItem
 	{
+        private readonly UnifiedRandom random = new(Environment.TickCount);
 
 		public new string LocalizationCategory => "Items.Weapons.Ranged";
 		 private static readonly float XYInaccuracy = 8.25f;
@@ -42,6 +46,11 @@ namespace helluvia01.Content.Items
 
 
 		public override Vector2? HoldoutOffset() => new Vector2(-20, 9);
+
+		public static void OnShot(Player player, Vector2 muzzle, Vector2 direction)
+		{
+			
+		}
 
 
 		public override bool Shoot(
@@ -98,7 +107,12 @@ namespace helluvia01.Content.Items
 
 		Vector2 mouseWorld = Main.MouseWorld + new Vector2(2f, 2f);
 
-
+			if (player.whoAmI == Main.myPlayer)
+				Main.instance.CameraModifiers.Add(new PunchCameraModifier(muzzle, -vel, 0.1f,
+				0.1f, 35, uniqueIdentity: "helluvia01.Smg"));
+				Vector2 eject = new(-side * random.NextFloat(1.5f, 3f), -player.gravDir * random.NextFloat(2.8f, 4.2f));
+            Add(Kind.Shell, EmberShotgun.WorldPoint(player, aim, EmberShotgun.EjectionFromGrip), eject + player.velocity * .25f,
+                aim.ToRotation(), 80, side * .25f, player.gravDir);
 		return false;
 
 		}
