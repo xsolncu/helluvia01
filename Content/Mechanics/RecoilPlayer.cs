@@ -1,98 +1,139 @@
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework;
 using System;
-using Terraria.DataStructures;
-using Terraria.ModLoader;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Terraria;
+using Terraria.DataStructures;
+using Terraria.GameContent;
+using Terraria.ModLoader;
 using helluvia01.Content.Items;
-using helluvia01.Content.Mechanics;
-using helluvia01.Content.Particles;
-using helluvia01.Content.Projectiles;
 
-public class RecoilPlayer : ModPlayer
+namespace helluvia01.Content.Mechanics
 {
-    public float RecoilAngle;
-
-    public override void PostUpdate()
+    public class RecoilPlayer : ModPlayer
     {
-        UpdateShotgunPose();
-        if (!Player.controlUseItem)
-            RecoilAngle = Math.Max(0f, RecoilAngle - MathHelper.ToRadians(1f));
-    }
+        public float RecoilAngle;
 
-    private const int ReturnTicks = 10;
-    private const float KickPixels = 4.2f;
-    private const float LiftPixels = 1.6f;
-    private const float KickAngle = .19f;
-    private Vector2 aim;
-    private uint firedAt;
-    private bool active;
-    private int slot;
+        private WeaponFireProfile activeProfile;
+        private Vector2 aim;
+        private float kickProgress;
+        private int slot;
 
-    internal void Start(Vector2 direction)
-    {
-        active = !Player.dead && Player.HeldItem.ModItem is EmberShotgun;
-        firedAt = Main.GameUpdateCount;
-        slot = Player.selectedItem;
-        aim = direction;
-    }
-
-    internal bool Visible => active && Main.GameUpdateCount - firedAt < ReturnTicks &&
-        Player.active && !Player.dead && !Player.noItems && !Player.CCed &&
-        Player.selectedItem == slot && Player.HeldItem.ModItem is EmberShotgun;
-
-    private void UpdateShotgunPose()
-    {
-        if (!Visible) {
-            active = false;
-            return;
+        public override void PostUpdate()
+        {
+            UpdateWeaponPose();
+            if (!Player.controlUseItem)
+                RecoilAngle = Math.Max(0f, RecoilAngle - MathHelper.ToRadians(1f));
         }
 
-        GetPose(out _, out float angle, out _);
-        Player.SetCompositeArmFront(true, Player.CompositeArmStretchAmount.Quarter, angle - MathHelper.PiOver2);
-        Player.SetCompositeArmBack(true, Player.CompositeArmStretchAmount.Full, angle - MathHelper.PiOver2);
+        internal void Start(Vector2 direction)
+        {
+            if (Player.dead || Player.HeldItem?.ModItem is not ICustomFireWeapon weapon)
+            {
+                kickProgress = 0f;
+                return;
+            }
+
+            activeProfile = weapon.FireProfile;
+            slot = Player.selectedItem;
+            aim = direction;
+            kickProgress = MathHelper.Clamp(kickProgress + 0.65f, 0f, 1f);
+        }
+
+        internal bool Visible => kickProgress > 0.01f && activeProfile != null &&
+            Player.active && !Player.dead && !Player.noItems && !Player.CCed &&
+            Player.selectedItem == slot &&
+            Player.HeldItem?.ModItem is ICustomFireWeapon weapon &&
+            weapon.FireProfile == activeProfile;
+
+        // Кастомный слой включается только для оружия, у которого явно задан GripOffset (например, EmberShotgun)
+        internal bool HasCustomDraw => Visible && activeProfile.GripOffset.HasValue;
+
+        private void UpdateWeaponPose()
+        {
+            if (!Visible)
+            {
+                kickProgress = 0f;
+                return;
+            }
+
+            float decayPerTick = 1f / Math.Max(1, activeProfile.RecoilReturnTicks);
+            kickProgress = Math.Max(0f, kickProgress - decayPerTick);
+
+            GetPose(out _, out float angle, out _);
+            Player.SetCompositeArmFront(true, Player.CompositeArmStretchAmount.Quarter, angle - MathHelper.PiOver2);
+            Player.SetCompositeArmBack(true, Player.CompositeArmStretchAmount.Full, angle - MathHelper.PiOver2);
+        }
+
+        public override void UpdateDead() => kickProgress = 0f;
+
+        public override void HideDrawLayers(PlayerDrawSet drawInfo)
+        {
+            if (HasCustomDraw)
+                PlayerDrawLayers.HeldItem.Hide();
+        }
+
+        internal void GetPose(out Vector2 grip, out float angle, out bool flip)
+        {
+            float kick = kickProgress * (2f - kickProgress);
+
+            int side = aim.X == 0f ? Player.direction : aim.X < 0f ? -1 : 1;
+            float orientation = side * Player.gravDir;
+
+            angle = aim.ToRotation() - orientation * activeProfile.RecoilKickAngle * kick;
+            grip = Player.RotatedRelativePoint(Player.MountedCenter)
+                - aim * (activeProfile.RecoilKickPixels * kick)
+                - Vector2.UnitY * (Player.gravDir * activeProfile.RecoilLiftPixels * kick);
+            flip = orientation < 0f;
+        }
+
+        internal WeaponFireProfile ActiveProfile => activeProfile;
     }
 
-    public override void UpdateDead() => active = false;
-
-    public override void HideDrawLayers(PlayerDrawSet drawInfo)
+    public sealed class CustomWeaponDrawLayer : PlayerDrawLayer
     {
-        if (Visible)
-            PlayerDrawLayers.HeldItem.Hide();
-    }
+        public override Position GetDefaultPosition() =>
+            new Between(PlayerDrawLayers.SolarShield, PlayerDrawLayers.ArmOverItem);
 
-    internal void GetPose(out Vector2 grip, out float angle, out bool flip)
-    {
-        float returnFraction = 1f - (Main.GameUpdateCount - firedAt) / (float)ReturnTicks;
-        float kick = MathHelper.Clamp((Main.GameUpdateCount - firedAt) / 1.5f, 0f, 1f) * returnFraction * returnFraction;
-        int side = aim.X == 0f ? Player.direction : aim.X < 0f ? -1 : 1;
-        float orientation = side * Player.gravDir;
-        angle = aim.ToRotation() - orientation * KickAngle * kick;
-        grip = Player.RotatedRelativePoint(Player.MountedCenter) - aim * (KickPixels * kick)
-            - Vector2.UnitY * (Player.gravDir * LiftPixels * kick);
-        flip = orientation < 0f;
-    }
+        public override bool GetDefaultVisibility(PlayerDrawSet drawInfo) =>
+            drawInfo.shadow == 0f &&
+            !drawInfo.drawPlayer.invis &&
+            drawInfo.drawPlayer.GetModPlayer<RecoilPlayer>().HasCustomDraw;
 
-}
+        protected override void Draw(ref PlayerDrawSet drawInfo)
+        {
+            Player player = drawInfo.drawPlayer;
+            RecoilPlayer recoil = player.GetModPlayer<RecoilPlayer>();
+            WeaponFireProfile profile = recoil.ActiveProfile;
+            if (profile?.GripOffset == null)
+                return;
 
-public sealed class ShotgunDrawLayer : PlayerDrawLayer
-{
-    public override Position GetDefaultPosition() => new Between(PlayerDrawLayers.SolarShield, PlayerDrawLayers.ArmOverItem);
+            int itemType = player.HeldItem.type;
+            Main.instance.LoadItem(itemType);
+            var asset = TextureAssets.Item[itemType];
+            if (asset == null || !asset.IsLoaded)
+                return;
 
-    public override bool GetDefaultVisibility(PlayerDrawSet drawInfo) =>
-        drawInfo.shadow == 0f && !drawInfo.drawPlayer.invis && drawInfo.drawPlayer.GetModPlayer<RecoilPlayer>().Visible;
+            Texture2D gun = asset.Value;
+            recoil.GetPose(out Vector2 grip, out float angle, out bool flip);
 
-    protected override void Draw(ref PlayerDrawSet drawInfo)
-    {
-        Player player = drawInfo.drawPlayer;
-        player.GetModPlayer<RecoilPlayer>().GetPose(out Vector2 grip, out float angle, out bool flip);
-        Texture2D gun = ModContent.GetInstance<ShotVisualSystem>().Gun.Value;
-        Vector2 origin = EmberShotgun.GripPixel;
-        if (flip)
-            origin.Y = gun.Height - origin.Y;
-        Vector2 drawPosition = grip + drawInfo.Position - player.position - Main.screenPosition;
-        Color light = Lighting.GetColor(grip.ToTileCoordinates());
-        drawInfo.DrawDataCache.Add(new DrawData(gun, drawPosition, null, light, angle, origin,
-            EmberShotgun.WeaponScale, flip ? SpriteEffects.FlipVertically : SpriteEffects.None, 0f));
+            Vector2 origin = profile.GripOffset.Value;
+            if (flip)
+                origin.Y = gun.Height - origin.Y;
+
+            Vector2 drawPosition = grip + drawInfo.Position - player.position - Main.screenPosition;
+            Color light = Lighting.GetColor(grip.ToTileCoordinates());
+
+            drawInfo.DrawDataCache.Add(new DrawData(
+                gun,
+                drawPosition,
+                null,
+                player.HeldItem.GetAlpha(light),
+                angle,
+                origin,
+                profile.Scale,
+                flip ? SpriteEffects.FlipVertically : SpriteEffects.None,
+                0f
+            ));
+        }
     }
 }

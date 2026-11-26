@@ -1,131 +1,106 @@
-using System;
-using helluvia01.Content.Particles;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Terraria;
-using Terraria.DataStructures;
-using Terraria.Graphics.CameraModifiers;
+using Terraria.Audio;
 using Terraria.ID;
 using Terraria.ModLoader;
-using Terraria.Utilities;
+using helluvia01.Content.Mechanics;
+using helluvia01.Content.Particles;
+using helluvia01.Content.Projectiles;
 
 namespace helluvia01.Content.Items
 {
-	// This is a basic item template.
-	// Please see tModLoader's ExampleMod for every other example:
-	// https://github.com/tModLoader/tModLoader/tree/stable/ExampleMod
-	public class smg : ModItem
-	{
-        private readonly UnifiedRandom random = new(Environment.TickCount);
+    public sealed class Smg : CustomFireGun
+    {
+        public static readonly Vector2 GripPixel = new(43, 20);
+        public static readonly Vector2 MuzzleFromGrip = new(44, -4);
+        public static readonly Vector2 EjectionFromGrip = new(16, -4);
 
-		public new string LocalizationCategory => "Items.Weapons.Ranged";
-		 private static readonly float XYInaccuracy = 8.25f;
-		 private static readonly float XYInaccuracy2 = 8.25f;
-		 public static int AmmoSavedPercent = 50;
-		// The Display Name and Tooltip of this item can be edited in the 'Localization/en-US_Mods.helluvia01.hjson' file.
-		public override void SetDefaults()
-		{
-			Item.shoot = ProjectileID.Bullet;
-			Item.damage = 3;
-			Item.DamageType = DamageClass.Ranged;
-			Item.useStyle = ItemUseStyleID.Shoot;
-			Item.shootSpeed = 55;
-			Item.noMelee = true;
-			Item.useAmmo = 	AmmoID.Bullet;
+        public const int Damage = 3;
+        public const float Knockback = 0f;
+        public const float WeaponScale = 0.56f;
 
-			Item.crit = 40;
-		  	Item.UseSound = SoundID.Item40;
+        public static WeaponFireProfile Profile { get; private set; }
+        public override WeaponFireProfile FireProfile => Profile;
 
-			Item.useAnimation = Item.useTime = 5;
-			Item.knockBack = 0;
-			Item.value = Item.buyPrice(silver: 1);
-			Item.rare = ItemRarityID.Blue;
-			Item.autoReuse = true;
-			Item.color = Color.White;
-		}
+        public new string LocalizationCategory => "Items.Weapons.Ranged";
 
 
-		public override Vector2? HoldoutOffset() => new Vector2(-20, 9);
+        public override void SetStaticDefaults()
+        {
+            Profile = new WeaponFireProfile
+            {
+                Identity = "helluvia01.Smg",
+				AutoReuse = true,
+				CooldownTicks = null, // Работает на стандартных useTime и autoReuse
+				AmmoType = AmmoID.Bullet,
+				AmmoSaveChance = 50,
+				OverrideProjectileType = ModContent.ProjectileType<LowCalBullet>(),
+				ProjectileType = ProjectileID.Bullet,
+				PelletCount = 2,
+				PelletSpreadY = 3.5f,
+				SpreadDegrees = 17f,
+				PelletSpeed = 35f,
 
-		public static void OnShot(Player player, Vector2 muzzle, Vector2 direction)
-		{
-			
-		}
+                // Геометрия
+                GripOffset = GripPixel,
+                MuzzleOffset = MuzzleFromGrip,
+                EjectionOffset = EjectionFromGrip,
+                Scale = WeaponScale,
 
+                // Легкая быстрая отдача для ПП
+                RecoilReturnTicks = 8,
+                RecoilKickPixels = 2.5f,
+                RecoilLiftPixels = 0.8f,
+                RecoilKickAngle = 0.08f,
 
-		public override bool Shoot(
-		Player player,
-		EntitySource_ItemUse_WithAmmo source,
-		Vector2 position,
-		Vector2 velocity,
-		int type,
-		int damage,
-		float knockback)
-		{
-		if (type == ProjectileID.Bullet)
-			type = ProjectileID.BulletHighVelocity;
+                // Камера и звук
+                ScreenShakeStrength = 0.1f,
+                ScreenShakeSpeed = 0.1f,
+                ScreenShakeFrames = 35,
+                FireSound = Main.dedServ ? null : SoundID.Item40,
+                ReadySound = null, // ПП не требует звука перезарядки затвора
 
-		velocity.X += Main.rand.NextFloat(-XYInaccuracy, XYInaccuracy);
-		velocity.Y += Main.rand.NextFloat(-XYInaccuracy, XYInaccuracy);
+                // Текстуры (можно указать текстуры ПП или оставить null, если не нужны)
+                ShellTexture = Main.dedServ ? null : ModContent.Request<Texture2D>("helluvia01/Content/Particles/LowCalBulletShell"),
+                ShellScale = 0.30f,
 
-		Vector2 vel = velocity;
-		Vector2 muzzle = position + Vector2.Normalize(velocity) * 35f;
+                FlashTexture = Main.dedServ ? null : ModContent.Request<Texture2D>("helluvia01/Content/Particles/gunflash"),
+				FlashCount = 2,
+				FlashSpreadY = 9f, // Разброс по локальной оси Y (между верхним и нижним стволом)
+				FlashScale = 0.95f,
 
-		velocity.X += Main.rand.NextFloat(-XYInaccuracy, XYInaccuracy);
-		velocity.Y += Main.rand.NextFloat(-XYInaccuracy, XYInaccuracy);
-		Vector2 vel2 = velocity;
+            };
+        }
 
+        public override void SetDefaults()
+        {
+            Item.width = 64;
+            Item.height = 54;
+            Item.scale = WeaponScale;
+            Item.damage = Damage;
+            Item.DamageType = DamageClass.Ranged;
+            Item.knockBack = Knockback;
+            Item.useStyle = ItemUseStyleID.Shoot;
+          	Item.useTime = Item.useAnimation = 5;
+    		Item.autoReuse = true;
+            Item.noMelee = true;
+            Item.shoot = ProjectileID.Bullet;
+            Item.shootSpeed = 15f;
+            Item.useAmmo = AmmoID.Bullet;
+            Item.crit = 40;
+            Item.rare = ItemRarityID.Blue;
+            Item.value = Item.buyPrice(silver: 1);
+        }
 
+        public override Vector2? HoldoutOffset() => new Vector2(-20, 9);
 
-		Projectile shot = Projectile.NewProjectileDirect(source, position, vel, type, damage, knockback, player.whoAmI);
-
-		for (int i = 0; i <= 1; i++)
-		{
-		float yOffset = Main.rand.NextFloat(-6f, 6f);
-
-			Projectile.NewProjectile(
-		source, position, Vector2.Zero, ModContent.ProjectileType<WhiteCrossProjectile>(),
-		0, 0f, player.whoAmI,
-		player.direction,
-		yOffset);
-		}
-
-
-		Vector2 secondPosition = position;
-		secondPosition.Y += 5f; // up; use +10f to move it down
-
-		Projectile shot2 = Projectile.NewProjectileDirect(source, secondPosition, vel2, type, damage, knockback, player.whoAmI);
-
-
-		var dust = Dust.NewDustPerfect(muzzle, DustID.InfernoFork,
-				velocity * 0.1f, 100, Color.Orange, 1.2f);
-			dust.noGravity = true;
-			dust.scale = 50;
-
-
-
-
-		Vector2 mouseWorld = Main.MouseWorld + new Vector2(2f, 2f);
-
-			if (player.whoAmI == Main.myPlayer)
-				Main.instance.CameraModifiers.Add(new PunchCameraModifier(muzzle, -vel, 0.1f,
-				0.1f, 35, uniqueIdentity: "helluvia01.Smg"));
-				Vector2 eject = new(-side * random.NextFloat(1.5f, 3f), -player.gravDir * random.NextFloat(2.8f, 4.2f));
-            Add(Kind.Shell, EmberShotgun.WorldPoint(player, aim, EmberShotgun.EjectionFromGrip), eject + player.velocity * .25f,
-                aim.ToRotation(), 80, side * .25f, player.gravDir);
-		return false;
-
-		}
-
-		public override bool CanConsumeAmmo(Item ammo, Player player) => Main.rand.Next(100) >= AmmoSavedPercent;
-
-		public override void AddRecipes()
-		{
-			Recipe recipe = CreateRecipe();
-			recipe.AddIngredient(ItemID.DirtBlock, 10);
-			recipe.AddTile(TileID.WorkBenches);
-			recipe.Register();
-
-		}
-	}
+        public override void AddRecipes()
+        {
+            CreateRecipe()
+                .AddIngredient(ItemID.DirtBlock, 10)
+                .AddTile(TileID.WorkBenches)
+                .Register();
+        }
+    }
 }

@@ -72,7 +72,7 @@ namespace helluvia01
                 {
                     ulong sequence = reader.ReadUInt64();
                     Vector2 aim = reader.ReadVector2();
-                    if (!player.GetModPlayer<PumpPlayer>().AcceptSequence(sequence))
+                    if (!player.GetModPlayer<ShotPlayer>().AcceptSequence(sequence))
                         return;
 
                     if (!ShotSession.TryNormalize(aim, out Vector2 direction) ||
@@ -85,7 +85,7 @@ namespace helluvia01
             if (Main.netMode != NetmodeID.MultiplayerClient)
                 return;
 
-            PumpPlayer local = Main.LocalPlayer.GetModPlayer<PumpPlayer>();
+            ShotPlayer local = Main.LocalPlayer.GetModPlayer<ShotPlayer>();
             switch (kind)
             {
                 case Kind.State:

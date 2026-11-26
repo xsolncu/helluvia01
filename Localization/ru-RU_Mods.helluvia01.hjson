@@ -25,6 +25,16 @@ Items: {
 		// DisplayName: smg
 		// Tooltip: ""
 	}
+
+	Snipergun: {
+		// DisplayName: Snipergun
+		// Tooltip: ""
+	}
+
+	Smg: {
+		// DisplayName: Smg
+		// Tooltip: ""
+	}
 }
 
 Projectiles: {
@@ -32,4 +42,5 @@ Projectiles: {
 	// MuzzleFlash.DisplayName: Muzzle Flash
 	// gunflash01.DisplayName: gunflash01
 	// WhiteCrossProjectile.DisplayName: White Cross Projectile
+	// LowCalBullet.DisplayName: Low Cal Bullet
 }

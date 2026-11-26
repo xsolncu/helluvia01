@@ -24,16 +24,16 @@ namespace helluvia01.Content.Items
             return player.RotatedRelativePoint(player.MountedCenter) + offset * WeaponScale;
         }
 
-        public const int Damage = 30;
-        public const int PelletCount = 7;
-        public const float SpreadDegrees = 24f;
+        public const int Damage = 110;
+        public const int PelletCount = 1;
+        public const float SpreadDegrees = 0f;
         public const int CooldownTicks = 90;
-        public const float Knockback = 9f;
-        public const float PelletStepSpeed = 12f;
+        public const float Knockback = 25f;
+        public const float PelletStepSpeed = 22f;
         public const float WeaponScale = 0.8f;
         public const int TriggerAnimationTicks = 1;
 
-        public override string Texture => "helluvia01/Content/Items/EmberShotgun";
+        public override string Texture => "helluvia01/Content/Items/Snipergun";
 
         public override void SetDefaults()
         {
@@ -61,7 +61,7 @@ namespace helluvia01.Content.Items
                 return false;
 
             if (Main.netMode == NetmodeID.MultiplayerClient)
-                return player.whoAmI != Main.myPlayer || !player.GetModPlayer<PumpPlayer>().Waiting;
+                return player.whoAmI != Main.myPlayer || !player.GetModPlayer<ShotPlayer>().Waiting;
 
             return ShotSession.Remaining(player) == 0;
         }
@@ -74,11 +74,14 @@ namespace helluvia01.Content.Items
 
             if (Main.netMode == NetmodeID.SinglePlayer)
             {
-                ShotSession.TryFire(player, direction, damage, knockback);
+                Vector2 origin = player.RotatedRelativePoint(player.MountedCenter);
+                Vector2 muzzle = Snipergun.WorldPoint(player, direction, Snipergun.MuzzleFromGrip);
+                Vector2 spawn = Collision.CanHitLine(origin, 1, 1, muzzle, 1, 1) ? muzzle : origin;
+                int pelletType = ModContent.ProjectileType<EnergyPellet>();
             }
             else
             {
-                PumpPlayer state = player.GetModPlayer<PumpPlayer>();
+                ShotPlayer state = player.GetModPlayer<ShotPlayer>();
                 if (state.Waiting)
                     return false;
 
@@ -95,7 +98,7 @@ namespace helluvia01.Content.Items
         {
             CreateRecipe()
                 .AddIngredient(ItemID.Shotgun)
-                .AddIngredient(ItemID.SoulofLight, 12)
+                .AddIngredient(ItemID.SoulofLight, 32)
                 .AddIngredient(ItemID.HallowedBar, 8)
                 .AddTile(TileID.MythrilAnvil)
                 .Register();
