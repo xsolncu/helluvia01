@@ -58,9 +58,13 @@ namespace helluvia01.Content.Mechanics
         public Asset<Texture2D> ShellTexture { get; init; }
         public float ShellScale { get; init; } = 0.85f;
         public Asset<Texture2D> SmokeTexture { get; init; }
+        public float SmokeForwardOffset { get; init; } = 0f;
+        public int SmokeCount { get; init; } = 4;
+        public float SmokeScale { get; init; } = 0.22f;
+
+
         public Vector3 FlashLightColor { get; init; } = new(0.92f, 0.46f, 0.12f);
         public Color SparkColor { get; init; } = new(255, 165, 54, 0);
-        public int SmokeCount { get; init; } = 4;
 
         
 

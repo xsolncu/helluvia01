@@ -158,11 +158,14 @@ namespace helluvia01.Content.Particles
                 SpawnShell(shellPos.Value, eject + player.velocity * 0.25f, aim.ToRotation(), side * 0.25f, player.gravDir, profile.ShellTexture.Value, profile.ShellScale);
             }
             if (profile.SmokeTexture is { IsLoaded: true })
-            {
+        {
+                // Выносим точку спавна дыма чуть вперёд из дула, чтобы центр спрайта не утопал в оружии
+                Vector2 smokeOrigin = muzzle + aim * (profile.SmokeForwardOffset);
+
                 for (int i = 0; i < profile.SmokeCount; i++)
                 {
                     Vector2 drift = aim.RotatedBy(random.NextFloat(-0.30f, 0.30f)) * random.NextFloat(0.5f, 2.6f);
-                    SpawnSmoke(muzzle + drift * i, drift, random.Next(17, 28), player.gravDir, profile.SmokeTexture.Value);
+                    SpawnSmoke(smokeOrigin + drift * (i + 1), drift, random.Next(17, 28), player.gravDir, profile.SmokeTexture.Value, profile.SmokeScale);
                 }
             }
         }
@@ -231,7 +234,7 @@ namespace helluvia01.Content.Particles
             });
         }
 
-        private void SpawnSmoke(Vector2 pos, Vector2 vel, int life, float grav, Texture2D texture)
+        private void SpawnSmoke(Vector2 pos, Vector2 vel, int life, float grav, Texture2D texture, float scale = 0.22f)
         {
             AddParticle(new Particle
             {
@@ -251,7 +254,7 @@ namespace helluvia01.Content.Particles
                 {
                     float fade = 1f - t;
                     batch.Draw(texture, screenPos, null, new Color(160, 147, 148) * (0.49f * fade),
-                        p.Angle, texture.Size() * 0.5f, 0.22f + 0.42f * t, SpriteEffects.None, 0f);
+                        p.Angle, texture.Size() * 0.5f, scale * (1f + 1.9f * t), SpriteEffects.None, 0f);
                 }
             });
         }

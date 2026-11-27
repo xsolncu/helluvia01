@@ -13,7 +13,7 @@ namespace helluvia01.Content.Items
     public sealed class Smg : CustomFireGun
     {
         public static readonly Vector2 GripPixel = new(43, 20);
-        public static readonly Vector2 MuzzleFromGrip = new(44, -4);
+        public static readonly Vector2 MuzzleFromGrip = new(44, -8);
         public static readonly Vector2 EjectionFromGrip = new(16, -4);
 
         public const int Damage = 3;
@@ -65,6 +65,10 @@ namespace helluvia01.Content.Items
                 ShellTexture = Main.dedServ ? null : ModContent.Request<Texture2D>("helluvia01/Content/Particles/LowCalBulletShell"),
                 ShellScale = 0.30f,
 
+                SmokeTexture = Main.dedServ ? null : ModContent.Request<Texture2D>("helluvia01/Content/Particles/ShotgunSmoke"),
+                SmokeForwardOffset = 18f,
+                SmokeScale = 0.5f,
+
                 FlashTexture = Main.dedServ ? null : ModContent.Request<Texture2D>("helluvia01/Content/Particles/gunflash"),
 				FlashCount = 2,
 				FlashSpreadY = 9f, // Разброс по локальной оси Y (между верхним и нижним стволом)
@@ -75,8 +79,8 @@ namespace helluvia01.Content.Items
 
         public override void SetDefaults()
         {
-            Item.width = 64;
-            Item.height = 54;
+            Item.width = 119;
+            Item.height = 62;
             Item.scale = WeaponScale;
             Item.damage = Damage;
             Item.DamageType = DamageClass.Ranged;
