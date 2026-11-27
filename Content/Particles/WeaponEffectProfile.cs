@@ -12,6 +12,8 @@ namespace helluvia01.Content.Mechanics
     public interface ICustomFireWeapon
     {
         WeaponFireProfile FireProfile { get; }
+
+        
     }
 
     public class WeaponFireProfile
@@ -61,6 +63,8 @@ namespace helluvia01.Content.Mechanics
         public float SmokeForwardOffset { get; init; } = 0f;
         public int SmokeCount { get; init; } = 4;
         public float SmokeScale { get; init; } = 0.22f;
+        public int SmokeLifeMin { get; init; } = 17; // Минимальное время жизни дыма в тиках (меньше = быстрее развеивается)
+        public int SmokeLifeMax { get; init; } = 28;
 
 
         public Vector3 FlashLightColor { get; init; } = new(0.92f, 0.46f, 0.12f);

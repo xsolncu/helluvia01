@@ -35,6 +35,11 @@ Items: {
 		// DisplayName: Smg
 		// Tooltip: ""
 	}
+
+	Spas12: {
+		// DisplayName: Spas12
+		// Tooltip: ""
+	}
 }
 
 Projectiles: {

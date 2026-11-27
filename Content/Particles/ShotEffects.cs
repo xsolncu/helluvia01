@@ -157,15 +157,24 @@ namespace helluvia01.Content.Particles
                 Vector2 eject = new(-side * random.NextFloat(1.5f, 3f), -player.gravDir * random.NextFloat(2.8f, 4.2f));
                 SpawnShell(shellPos.Value, eject + player.velocity * 0.25f, aim.ToRotation(), side * 0.25f, player.gravDir, profile.ShellTexture.Value, profile.ShellScale);
             }
-            if (profile.SmokeTexture is { IsLoaded: true })
-        {
-                // Выносим точку спавна дыма чуть вперёд из дула, чтобы центр спрайта не утопал в оружии
-                Vector2 smokeOrigin = muzzle + aim * (profile.SmokeForwardOffset);
+            
+           if (profile.SmokeTexture is { IsLoaded: true })
+            {
+                Vector2 smokeOrigin = muzzle + aim * profile.SmokeForwardOffset;
+                int minLife = Math.Max(1, profile.SmokeLifeMin);
+                int maxLife = Math.Max(minLife + 1, profile.SmokeLifeMax);
 
                 for (int i = 0; i < profile.SmokeCount; i++)
                 {
                     Vector2 drift = aim.RotatedBy(random.NextFloat(-0.30f, 0.30f)) * random.NextFloat(0.5f, 2.6f);
-                    SpawnSmoke(smokeOrigin + drift * (i + 1), drift, random.Next(17, 28), player.gravDir, profile.SmokeTexture.Value, profile.SmokeScale);
+                    SpawnSmoke(
+                        smokeOrigin + drift * (i + 1),
+                        drift,
+                        random.Next(minLife, maxLife),
+                        player.gravDir,
+                        profile.SmokeTexture.Value,
+                        profile.SmokeScale
+                    );
                 }
             }
         }

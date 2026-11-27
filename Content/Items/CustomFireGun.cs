@@ -12,17 +12,19 @@ namespace helluvia01.Content.Items
     {
         public abstract WeaponFireProfile FireProfile { get; }
 
+        public override Vector2? HoldoutOffset() => Vector2.Zero;
+
         public override bool CanUseItem(Player player)
         {
+            // Полуавтоматический режим: требует повторного нажатия ЛКМ для любого оружия
+            if (!FireProfile.AutoReuse && player.whoAmI == Main.myPlayer && !PlayerInput.Triggers.JustPressed.MouseLeft)
+                return false;
+
             // Если оружие использует стандартный таймер Terraria (CooldownTicks == null)
             if (!FireProfile.CooldownTicks.HasValue)
                 return true;
 
-            // Логика для оружия с кастомным кулдауном (как EmberShotgun)
-            if (!FireProfile.AutoReuse && player.whoAmI == Main.myPlayer && !PlayerInput.Triggers.JustPressed.MouseLeft)
-                return false;
-
-            if (Main.netMode == NetmodeID.MultiplayerClient)
+           if (Main.netMode == NetmodeID.MultiplayerClient)
                 return player.whoAmI != Main.myPlayer || !player.GetModPlayer<ShotPlayer>().Waiting;
 
             return ShotSession.Remaining(player) == 0;

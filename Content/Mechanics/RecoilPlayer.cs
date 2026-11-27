@@ -10,84 +10,104 @@ using helluvia01.Content.Items;
 namespace helluvia01.Content.Mechanics
 {
     public class RecoilPlayer : ModPlayer
+{
+    private WeaponFireProfile activeProfile;
+    private Vector2 aim = Vector2.UnitX;
+    private float kickProgress;
+    private int slot;
+
+    public override void PostUpdate()
     {
-        public float RecoilAngle;
-
-        private WeaponFireProfile activeProfile;
-        private Vector2 aim;
-        private float kickProgress;
-        private int slot;
-
-        public override void PostUpdate()
-        {
-            UpdateWeaponPose();
-            if (!Player.controlUseItem)
-                RecoilAngle = Math.Max(0f, RecoilAngle - MathHelper.ToRadians(1f));
-        }
-
-        internal void Start(Vector2 direction)
-        {
-            if (Player.dead || Player.HeldItem?.ModItem is not ICustomFireWeapon weapon)
-            {
-                kickProgress = 0f;
-                return;
-            }
-
-            activeProfile = weapon.FireProfile;
-            slot = Player.selectedItem;
-            aim = direction;
-            kickProgress = MathHelper.Clamp(kickProgress + 0.65f, 0f, 1f);
-        }
-
-        internal bool Visible => kickProgress > 0.01f && activeProfile != null &&
-            Player.active && !Player.dead && !Player.noItems && !Player.CCed &&
-            Player.selectedItem == slot &&
+        // Если в руках наше кастомное оружие с GripOffset и идет анимация использования
+        if (Player.active && !Player.dead && !Player.noItems && !Player.CCed &&
+            Player.ItemAnimationActive &&
             Player.HeldItem?.ModItem is ICustomFireWeapon weapon &&
-            weapon.FireProfile == activeProfile;
-
-        // Кастомный слой включается только для оружия, у которого явно задан GripOffset (например, EmberShotgun)
-        internal bool HasCustomDraw => Visible && activeProfile.GripOffset.HasValue;
-
-        private void UpdateWeaponPose()
+            weapon.FireProfile.GripOffset.HasValue)
         {
-            if (!Visible)
+            if (activeProfile != weapon.FireProfile || slot != Player.selectedItem)
             {
+                activeProfile = weapon.FireProfile;
+                slot = Player.selectedItem;
                 kickProgress = 0f;
-                return;
             }
 
+            // Берем текущее направление прицеливания из угла руки/предмета Terraria
+            float baseRotation = Player.itemRotation;
+            if (Player.direction == -1)
+                baseRotation += MathHelper.Pi;
+            aim = baseRotation.ToRotationVector2();
+
+            UpdateWeaponPose();
+        }
+        else
+        {
+            kickProgress = 0f;
+            activeProfile = null;
+        }
+    }
+
+    internal void Start(Vector2 direction)
+    {
+        if (Player.dead || Player.HeldItem?.ModItem is not ICustomFireWeapon weapon)
+        {
+            kickProgress = 0f;
+            return;
+        }
+
+        activeProfile = weapon.FireProfile;
+        slot = Player.selectedItem;
+        aim = direction;
+        kickProgress = MathHelper.Clamp(kickProgress + 0.65f, 0f, 1f);
+    }
+
+    internal bool HasCustomDraw =>  activeProfile?.GripOffset != null &&
+        Player.active && !Player.dead && !Player.noItems && !Player.CCed &&
+        Player.ItemAnimationActive &&
+        Player.selectedItem == slot &&
+        Player.HeldItem?.ModItem is ICustomFireWeapon weapon &&
+        weapon.FireProfile == activeProfile || kickProgress > 0.01f ;
+
+    private void UpdateWeaponPose()
+    {
+        if (kickProgress > 0f)
+        {
             float decayPerTick = 1f / Math.Max(1, activeProfile.RecoilReturnTicks);
             kickProgress = Math.Max(0f, kickProgress - decayPerTick);
-
-            GetPose(out _, out float angle, out _);
-            Player.SetCompositeArmFront(true, Player.CompositeArmStretchAmount.Quarter, angle - MathHelper.PiOver2);
-            Player.SetCompositeArmBack(true, Player.CompositeArmStretchAmount.Full, angle - MathHelper.PiOver2);
         }
 
-        public override void UpdateDead() => kickProgress = 0f;
-
-        public override void HideDrawLayers(PlayerDrawSet drawInfo)
-        {
-            if (HasCustomDraw)
-                PlayerDrawLayers.HeldItem.Hide();
-        }
-
-        internal void GetPose(out Vector2 grip, out float angle, out bool flip)
-        {
-            float kick = kickProgress * (2f - kickProgress);
-
-            int side = aim.X == 0f ? Player.direction : aim.X < 0f ? -1 : 1;
-            float orientation = side * Player.gravDir;
-
-            angle = aim.ToRotation() - orientation * activeProfile.RecoilKickAngle * kick;
-            grip = Player.RotatedRelativePoint(Player.MountedCenter)
-                - aim * (activeProfile.RecoilKickPixels * kick)
-                - Vector2.UnitY * (Player.gravDir * activeProfile.RecoilLiftPixels * kick);
-            flip = orientation < 0f;
-        }
-
-        internal WeaponFireProfile ActiveProfile => activeProfile;
+        GetPose(out _, out float angle, out _);
+        Player.SetCompositeArmFront(true, Player.CompositeArmStretchAmount.Quarter, angle - MathHelper.PiOver2);
+        Player.SetCompositeArmBack(true, Player.CompositeArmStretchAmount.Full, angle - MathHelper.PiOver2);
     }
+
+    public override void UpdateDead()
+    {
+        kickProgress = 0f;
+        activeProfile = null;
+    }
+
+    public override void HideDrawLayers(PlayerDrawSet drawInfo)
+    {
+        if (HasCustomDraw)
+            PlayerDrawLayers.HeldItem.Hide();
+    }
+
+    internal void GetPose(out Vector2 grip, out float angle, out bool flip)
+    {
+        float kick = kickProgress * (2f - kickProgress);
+
+        int side = aim.X == 0f ? Player.direction : aim.X < 0f ? -1 : 1;
+        float orientation = side * Player.gravDir;
+
+        angle = aim.ToRotation() - orientation * activeProfile.RecoilKickAngle * kick;
+        grip = Player.RotatedRelativePoint(Player.MountedCenter)
+            - aim * (activeProfile.RecoilKickPixels * kick)
+            - Vector2.UnitY * (Player.gravDir * activeProfile.RecoilLiftPixels * kick);
+        flip = orientation < 0f;
+    }
+
+    internal WeaponFireProfile ActiveProfile => activeProfile;
+}
 
     public sealed class CustomWeaponDrawLayer : PlayerDrawLayer
     {

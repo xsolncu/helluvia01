@@ -12,13 +12,13 @@ namespace helluvia01.Content.Items
 {
     public sealed class Smg : CustomFireGun
     {
-        public static readonly Vector2 GripPixel = new(43, 20);
+        public static readonly Vector2 GripPixel = new(45, 21);
         public static readonly Vector2 MuzzleFromGrip = new(44, -8);
         public static readonly Vector2 EjectionFromGrip = new(16, -4);
 
         public const int Damage = 3;
         public const float Knockback = 0f;
-        public const float WeaponScale = 0.56f;
+        public const float WeaponScale = 0.53f;
 
         public static WeaponFireProfile Profile { get; private set; }
         public override WeaponFireProfile FireProfile => Profile;
@@ -97,7 +97,6 @@ namespace helluvia01.Content.Items
             Item.value = Item.buyPrice(silver: 1);
         }
 
-        public override Vector2? HoldoutOffset() => new Vector2(-20, 9);
 
         public override void AddRecipes()
         {

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("helluvia01")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+40a1b5cbb99cebddac9663f0087cc53770047203")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6662c4fa5b3ce32e6f52f29d7ce317037d03a850")]
 [assembly: System.Reflection.AssemblyProductAttribute("helluvia01")]
 [assembly: System.Reflection.AssemblyTitleAttribute("helluvia01")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
